@@ -60,7 +60,7 @@ fn run_stmt(stmt: ast.Stmt, mem: Mem) -> Mem {
 fn run_stmts(stmts: ast.StmtList, mem: Mem) -> Mem {
   case stmts {
     [] -> mem
-    [#(stmt, _), ..tail] ->
+    [stmt, ..tail] ->
       run_stmt(stmt, mem)
       |> run_stmts(tail, _)
   }

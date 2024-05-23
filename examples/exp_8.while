@@ -1,0 +1,7 @@
+x0 := x0 + 1;
+x1 := x1 + 3;
+LOOP x1 DO
+  LOOP x0 DO
+    x0 := x0 + 1
+  END
+END

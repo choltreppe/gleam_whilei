@@ -5,9 +5,12 @@ import gleam/list
 import gleam/result
 import gleam/io
 
-import lineinfo.{type LineInfo, LineInfo}
 import ast
 
+
+type LineInfo {
+  LineInfo(line: Int, col: Int)
+}
 
 pub opaque type ParsingError {
   UnexpectedChar(String, LineInfo)
@@ -17,14 +20,17 @@ pub opaque type ParsingError {
 
 type ParsingResult(a) = Result(a, ParsingError)
 
-pub fn error_string(e: ParsingError) -> String {
+pub fn error_msg(e: ParsingError) -> String {
   case e {
-    UnexpectedChar(c, info) ->
-      lineinfo.error_msg(info, "unexpected chararcter '" <> c <> "'")
-    UnexpectedToken(token, info) -> 
-      lineinfo.error_msg(info, "unexpected token")  //TODO: render token
-    UnexpectedEnd ->
-      "unexpected end of file"
+    UnexpectedEnd -> "unexpected end of file"
+    _ -> {
+      let #(info, msg) = case e {
+        UnexpectedChar(c, info) -> #(info, "unexpected chararcter '" <> c <> "'")
+        UnexpectedToken(token, info) -> #(info, "unexpected token")  //TODO: render token
+        UnexpectedEnd -> panic
+      }
+      int.to_string(info.line) <> ":" <> int.to_string(info.col) <> " Error: " <> msg
+    }
   }
 }
 
@@ -100,17 +106,17 @@ fn tokenize(code: String, info: LineInfo) -> ParsingResult(Tokens) {
 }
 
 
-fn parse_stmt(tokens: Tokens) -> ParsingResult(#(#(ast.Stmt, LineInfo), Tokens)) {
+fn parse_stmt(tokens: Tokens) -> ParsingResult(#(ast.Stmt, Tokens)) {
   case tokens {
     [#(Var(res), info), #(Asgn, _), #(Var(left), _), #(Op(op), _), #(Num(right), _), ..tail] ->
-      Ok(#(#(ast.Asgn(res, left, op, right), info), tail))
+      Ok(#(ast.Asgn(res, left, op, right), tail))
     [#(Loop, info), #(Var(iters), _), #(Do, _), ..tail] -> {
       use #(body, tail) <- result.map(parse_stmt_list(tail))
-      #(#(ast.Loop(iters, body), info), tail)
+      #(ast.Loop(iters, body), tail)
     }
     [#(While, info), #(Var(cond_var), _), #(GtEq, _), #(Num(0), _), #(Do, _), ..tail] -> {
       use #(body, tail) <- result.map(parse_stmt_list(tail))
-      #(#(ast.While(cond_var, body), info), tail)
+      #(ast.While(cond_var, body), tail)
     }
     [#(token, info), .._] -> Error(UnexpectedToken(token, info))
     [] -> panic

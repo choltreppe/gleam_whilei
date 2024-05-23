@@ -1,5 +1,3 @@
-import lineinfo.{type LineInfo}
-
 pub type VarId = Int
 
 pub type Op {Add Sub}
@@ -15,4 +13,4 @@ pub type Stmt {
   While(cond_var: VarId, body: StmtList)
 }
 
-pub type StmtList = List(#(Stmt, LineInfo))
+pub type StmtList = List(Stmt)
