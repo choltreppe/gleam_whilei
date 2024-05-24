@@ -24,8 +24,8 @@ pub fn error_msg(e: ParsingError) -> String {
     _ -> {
       let #(info, msg) = case e {
         UnexpectedChar(c, info) -> #(info, "unexpected chararcter '" <> c <> "'")
-        UnexpectedToken(token, info) -> #(info, "unexpected token")  //TODO: render token
-        UnexpectedEnd -> panic
+        UnexpectedToken(token, info) -> #(info, "unexpected token " <> token_to_string(token))
+        UnexpectedEnd -> panic as "already covered"
       }
       int.to_string(info.line) <> ":" <> int.to_string(info.col) <> " Error: " <> msg
     }
@@ -48,6 +48,25 @@ type Token {
 }
 
 type Tokens = List(#(Token, LineInfo))
+
+fn token_to_string(token: Token) -> String {
+  case token {
+    Num(val) -> int.to_string(val)
+    Var(id) -> "x" <> int.to_string(id)
+    Op(op) -> case op {
+      ast.Add -> "+"
+      ast.Sub -> "-"
+    }
+    Semi -> ";"
+    Asgn -> ":="
+    GtEq -> ">="
+    Loop -> "LOOP"
+    While -> "WHILE"
+    Do -> "DO"
+    End -> "END"
+    Debug -> "DEBUG"
+  }
+}
 
 fn parse_num(code: String, info: LineInfo) -> ParsingResult(#(Int, String)) {
   // I would like to do this just once in global scope
