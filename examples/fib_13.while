@@ -1,0 +1,23 @@
+x0 := x4 + 0;
+x1 := x4 + 1;
+
+x2 := x4 + 7;
+LOOP x2 DO
+
+  x3 := x4 + 0;
+  LOOP x1 DO
+    x3 := x3 + 1
+  END;
+
+  LOOP x0 DO
+    x1 := x1 + 1
+  END;
+
+  x0 := x4 + 0;
+  LOOP x3 DO
+    x0 := x0 + 1
+  END;
+
+  DEBUG x0
+
+END

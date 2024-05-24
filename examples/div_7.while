@@ -1,0 +1,9 @@
+x1 := x1 + 21;
+x2 := x2 + 3;
+
+x1 := x1 + 1;
+LOOP x2 DO x1 := x1 - 1 END;
+WHILE x1 > 0 DO
+  LOOP x2 DO x1 := x1 - 1 END;
+  x0 := x0 + 1
+END
