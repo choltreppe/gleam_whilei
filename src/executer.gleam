@@ -16,10 +16,11 @@ fn load(mem: Mem, i: Int) -> Int {
 
 fn store(mem: Mem, i: Int, val: Int) -> Mem {
   let len = list.length(mem)
-  case i < len {
+  let mem = case i < len {
     True -> list.concat([list.take(mem, i), [val, ..list.drop(mem, i+1)]])
-    False -> list.concat([mem, list.repeat(0, len-i-1), [val]])
+    False -> list.concat([mem, list.repeat(0, i-len), [val]])
   }
+  mem
 }
 
 

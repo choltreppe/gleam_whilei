@@ -11,7 +11,10 @@ pub fn main() {
   case argv.load().arguments {
     [filepath] -> case read(filepath) {
       Ok(code) -> case parse(code) {
-        Ok(prog) -> io.println(run(prog) |> int.to_string)
+        Ok(prog) -> {
+          io.debug(prog)
+          io.println(run(prog) |> int.to_string)
+        }
         Error(e) -> io.println_error(e |> parser.error_msg)
       }
       _ -> io.println_error("Couldn't open file " <> filepath)
