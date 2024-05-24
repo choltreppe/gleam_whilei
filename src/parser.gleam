@@ -1,4 +1,5 @@
 import gleam/int
+import gleam/list
 import gleam/string
 import gleam/regex
 import gleam/result
@@ -12,7 +13,7 @@ type LineInfo {
 
 pub opaque type ParsingError {
   UnexpectedChar(String, LineInfo)
-  UnexpectedToken(Token, LineInfo)
+  InvalidStmt(List(Token), LineInfo)
   UnexpectedEnd
 }
 
@@ -24,7 +25,7 @@ pub fn error_msg(e: ParsingError) -> String {
     _ -> {
       let #(info, msg) = case e {
         UnexpectedChar(c, info) -> #(info, "unexpected chararcter '" <> c <> "'")
-        UnexpectedToken(token, info) -> #(info, "unexpected token " <> token_to_string(token))
+        InvalidStmt(token, info) -> #(info, "invalid statement: " <> list.map(token, token_to_string) |> string.join(" "))
         UnexpectedEnd -> panic as "already covered"
       }
       int.to_string(info.line) <> ":" <> int.to_string(info.col) <> " Error: " <> msg
@@ -39,7 +40,7 @@ type Token {
   Op(ast.Op)
   Semi
   Asgn
-  GtEq
+  Greater
   Loop
   While
   Do
@@ -59,7 +60,7 @@ fn token_to_string(token: Token) -> String {
     }
     Semi -> ";"
     Asgn -> ":="
-    GtEq -> ">="
+    Greater -> ">"
     Loop -> "LOOP"
     While -> "WHILE"
     Do -> "DO"
@@ -95,7 +96,7 @@ fn tokenize(code: String, info: LineInfo) -> ParsingResult(Tokens) {
         case code |> string.trim_left {
           ";" <> tail -> Ok(#(Semi, tail))
           ":=" <> tail -> Ok(#(Asgn, tail))
-          ">=" <> tail -> Ok(#(GtEq, tail))
+          ">" <> tail -> Ok(#(Greater, tail))
           "+" <> tail -> Ok(#(Op(ast.Add), tail))
           "-" <> tail -> Ok(#(Op(ast.Sub), tail))
           "LOOP" <> tail -> Ok(#(Loop, tail))
@@ -114,8 +115,8 @@ fn tokenize(code: String, info: LineInfo) -> ParsingResult(Tokens) {
         }
       {
         Ok(#(token, tail)) -> {
-          let info = LineInfo(info.line, info.col + string.length(code) - string.length(tail))
-          tokenize(tail, info)
+          let next_info = LineInfo(info.line, info.col + string.length(code) - string.length(tail))
+          tokenize(tail, next_info)
           |> result.map(fn(tokens){[#(token, info), ..tokens]})
         }
         Error(e) -> Error(e)
@@ -125,6 +126,16 @@ fn tokenize(code: String, info: LineInfo) -> ParsingResult(Tokens) {
 }
 
 
+fn invalid_stmt_error(tokens: Tokens, info: LineInfo) -> ParsingError {
+  InvalidStmt(
+    tokens
+    |> list.map(fn(t){t.0})
+    |> list.take_while(fn(t){t != Semi && t != End})
+    ,
+    info
+  )
+}
+
 fn parse_stmt(tokens: Tokens) -> ParsingResult(#(ast.Stmt, Tokens)) {
   case tokens {
     [#(Var(res), _), #(Asgn, _), #(Var(left), _), #(Op(op), _), #(Num(right), _), ..tail] ->
@@ -133,13 +144,13 @@ fn parse_stmt(tokens: Tokens) -> ParsingResult(#(ast.Stmt, Tokens)) {
       use #(body, tail) <- result.map(parse_stmt_list(tail))
       #(ast.Loop(iters, body), tail)
     }
-    [#(While, _), #(Var(cond_var), _), #(GtEq, _), #(Num(0), _), #(Do, _), ..tail] -> {
+    [#(While, _), #(Var(cond_var), _), #(Greater, _), #(Num(0), _), #(Do, _), ..tail] -> {
       use #(body, tail) <- result.map(parse_stmt_list(tail))
       #(ast.While(cond_var, body), tail)
     }
     [#(Debug, _), #(Var(id), _), ..tail] ->
       Ok(#(ast.Debug(id), tail))
-    [#(token, info), .._] -> Error(UnexpectedToken(token, info))
+    [#(_, info), .._] -> Error(invalid_stmt_error(tokens, info))
     [] -> panic
   }
 }
@@ -152,7 +163,7 @@ fn parse_stmt_list(tokens: Tokens) -> ParsingResult(#(ast.StmtList, Tokens)) {
       #([stmt, ..stmts], tail)
     }
     [#(End, _), ..tail] -> Ok(#([stmt], tail))
-    [#(token, info), .._] -> Error(UnexpectedToken(token, info))
+    [#(_, info), .._] -> Error(invalid_stmt_error(tokens, info))
     [] -> panic
   }
 }
@@ -162,7 +173,7 @@ pub fn parse(code: String) -> Result(ast.StmtList, ParsingError) {
   use #(stmts, tail) <- result.try(parse_stmt_list(tokens))
   case tail {
     [] -> Ok(stmts)
-    [#(End, info), .._] -> Error(UnexpectedToken(End, info))
+    [#(End, info), .._] -> Error(invalid_stmt_error(tokens, info))
     _ -> panic
   }
 }
