@@ -11,6 +11,7 @@ pub type Stmt {
   )
   Loop(iters: VarId, body: StmtList)
   While(cond_var: VarId, body: StmtList)
+  Debug(VarId)
 }
 
 pub type StmtList = List(Stmt)

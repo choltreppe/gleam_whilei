@@ -1,5 +1,7 @@
+import gleam/int
 import gleam/list
 import gleam/result
+import gleam/io.{println}
 import ast
 
 
@@ -54,6 +56,11 @@ fn run_stmt(stmt: ast.Stmt, mem: Mem) -> Mem {
           |> run_stmt(ast.While(cond_var, body), _)
         }
       }
+    ast.Debug(id) -> {
+      let res = mem |> load(id) |> int.to_string
+      println("Debug: x" <> int.to_string(id) <> " = " <> res)
+      mem
+    }
   }
 }
 

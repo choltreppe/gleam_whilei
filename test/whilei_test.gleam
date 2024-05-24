@@ -5,9 +5,9 @@ import gleam/string
 import gleam/list
 import simplifile.{get_files, read}
 
-import ast
 import parser.{parse}
 import executer.{run}
+
 
 pub fn main() {
   gleeunit.main()

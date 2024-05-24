@@ -1,9 +1,7 @@
 import gleam/int
 import gleam/string
 import gleam/regex
-import gleam/list
 import gleam/result
-import gleam/io
 
 import ast
 
@@ -46,6 +44,7 @@ type Token {
   While
   Do
   End
+  Debug
 }
 
 type Tokens = List(#(Token, LineInfo))
@@ -84,6 +83,7 @@ fn tokenize(code: String, info: LineInfo) -> ParsingResult(Tokens) {
           "WHILE" <> tail -> Ok(#(While, tail))
           "DO" <> tail -> Ok(#(Do, tail))
           "END" <> tail -> Ok(#(End, tail))
+          "DEBUG" <> tail -> Ok(#(Debug, tail))
           "x" <> tail -> case parse_num(tail, info) {
             Ok(#(id, tail)) -> Ok(#(Var(id), tail))
             Error(e) -> Error(e)
@@ -108,16 +108,18 @@ fn tokenize(code: String, info: LineInfo) -> ParsingResult(Tokens) {
 
 fn parse_stmt(tokens: Tokens) -> ParsingResult(#(ast.Stmt, Tokens)) {
   case tokens {
-    [#(Var(res), info), #(Asgn, _), #(Var(left), _), #(Op(op), _), #(Num(right), _), ..tail] ->
+    [#(Var(res), _), #(Asgn, _), #(Var(left), _), #(Op(op), _), #(Num(right), _), ..tail] ->
       Ok(#(ast.Asgn(res, left, op, right), tail))
-    [#(Loop, info), #(Var(iters), _), #(Do, _), ..tail] -> {
+    [#(Loop, _), #(Var(iters), _), #(Do, _), ..tail] -> {
       use #(body, tail) <- result.map(parse_stmt_list(tail))
       #(ast.Loop(iters, body), tail)
     }
-    [#(While, info), #(Var(cond_var), _), #(GtEq, _), #(Num(0), _), #(Do, _), ..tail] -> {
+    [#(While, _), #(Var(cond_var), _), #(GtEq, _), #(Num(0), _), #(Do, _), ..tail] -> {
       use #(body, tail) <- result.map(parse_stmt_list(tail))
       #(ast.While(cond_var, body), tail)
     }
+    [#(Debug, _), #(Var(id), _), ..tail] ->
+      Ok(#(ast.Debug(id), tail))
     [#(token, info), .._] -> Error(UnexpectedToken(token, info))
     [] -> panic
   }
