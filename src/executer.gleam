@@ -1,14 +1,14 @@
+import ast
 import gleam/int
+import gleam/io.{println}
 import gleam/list
 import gleam/result
-import gleam/io.{println}
-import ast
 
-
-type Mem = List(Int)
+type Mem =
+  List(Int)
 
 fn load(mem: Mem, i: Int) -> Int {
-  case mem |> list.at(i) {
+  case mem |> list.drop(i) |> list.first {
     Ok(val) -> val
     _ -> 0
   }
@@ -17,18 +17,17 @@ fn load(mem: Mem, i: Int) -> Int {
 fn store(mem: Mem, i: Int, val: Int) -> Mem {
   let len = list.length(mem)
   case i < len {
-    True -> list.concat([list.take(mem, i), [val, ..list.drop(mem, i+1)]])
-    False -> list.concat([mem, list.repeat(0, i-len), [val]])
+    True -> list.concat([list.take(mem, i), [val, ..list.drop(mem, i + 1)]])
+    False -> list.concat([mem, list.repeat(0, i - len), [val]])
   }
 }
-
 
 fn run_loop(body: ast.StmtList, n: Int, mem: Mem) -> Mem {
   case n {
     0 -> mem
     iters ->
       run_stmts(body, mem)
-      |> run_loop(body, iters-1, _)
+      |> run_loop(body, iters - 1, _)
   }
 }
 
@@ -36,16 +35,15 @@ fn run_stmt(stmt: ast.Stmt, mem: Mem) -> Mem {
   case stmt {
     ast.Asgn(res, left, op, right) -> {
       let left = mem |> load(left)
-      mem |> store(
-        res,
-        case op {
-          ast.Add -> left + right
-          ast.Sub -> case left > right {
+      mem
+      |> store(res, case op {
+        ast.Add -> left + right
+        ast.Sub ->
+          case left > right {
             True -> left - right
             False -> 0
           }
-        }
-      )
+      })
     }
     ast.Loop(iters, body) -> run_loop(body, mem |> load(iters), mem)
     ast.While(cond_var, body) ->
@@ -75,6 +73,7 @@ fn run_stmts(stmts: ast.StmtList, mem: Mem) -> Mem {
 
 pub fn run(stmts: ast.StmtList) -> Int {
   run_stmts(stmts, [])
-  |> list.at(0)
+  |> list.drop(0)
+  |> list.first
   |> result.unwrap(0)
 }
